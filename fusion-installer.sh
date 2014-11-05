@@ -25,9 +25,9 @@
 #  all those who participated to this and to previous installers.
 #  Thanks to all.
 
-FUSIONPANEL_INSTALLER_VERSION="1.0.0-beta8"
-FUSIONPANEL_CORE_VERSION="1.0.0-beta9"
-FUSIONPANEL_PRECONF_VERSION="1.0.0-beta3"
+FUSIONPANEL_INSTALLER_VERSION="0.0.1"
+FUSIONPANEL_CORE_VERSION="master"
+FUSIONPANEL_PRECONF_VERSION="master"
 
 PANEL_PATH="/etc/fusionpanel"
 PANEL_DATA="/var/fusionpanel"
@@ -145,7 +145,7 @@ if [[ "$OS" = "CentOs" ]]; then
 elif [[ "$OS" = "Ubuntu" ]]; then
     $PACKAGE_INSTALLER dnsutils
 fi
-extern_ip="$(wget -qO- http://api.fusionpanel.org/ip.txt)"
+extern_ip="$(wget -qO- http://api.sentora.org/ip.txt)"
 local_ip=$(ifconfig eth0 | sed -En 's|.*inet [^0-9]*(([0-9]*\.){3}[0-9]*).*$|\1|p')
 
 # Enable parameters to be entered on commandline, required for vagrant install
@@ -477,7 +477,10 @@ fi
 #--- Download FusionPanel archive from GitHub
 echo -e "\n-- Downloading FusionPanel, Please wait, this may take several minutes, the installer will continue after this is complete!"
 # Get latest fusionpanel
-wget -nv -O fusionpanel_core.zip https://github.com/fusionpanel/fusionpanel-core/archive/$FUSIONPANEL_CORE_VERSION.zip
+#wget -nv -O fusionpanel_core.zip https://github.com/fusionpanel/fusionpanel-core/archive/$FUSIONPANEL_CORE_VERSION.zip
+#wget -nv -O fusionpanel_core.zip https://github.com/mjsorribas/fusionpanel-core/archive/master.zip
+wget -nv -O fusionpanel_core.zip https://github.com/mjsorribas/fusionpanel-core/archive/$FUSIONPANEL_CORE_VERSION.zip
+#git clone https://github.com/mjsorribas/fusionpanel-core.git
 mkdir -p $PANEL_PATH
 chown -R root:root $PANEL_PATH
 unzip -oq fusionpanel_core.zip -d $PANEL_PATH
@@ -515,7 +518,7 @@ chmod +x $PANEL_PATH/panel/bin/setzadmin
 ln -s $PANEL_PATH/panel/bin/setzadmin /usr/bin/setzadmin
 
 #--- Install preconfig
-wget -nv -O fusionpanel_preconfig.zip https://github.com/fusionpanel/fusionpanel-installers/archive/$FUSIONPANEL_PRECONF_VERSION.zip
+wget -nv -O fusionpanel_preconfig.zip https://github.com/mjsorribas/fusionpanel-installers/archive/$FUSIONPANEL_PRECONF_VERSION.zip
 unzip -oq fusionpanel_preconfig.zip
 cp -rf fusionpanel-installers-$FUSIONPANEL_PRECONF_VERSION/preconf/* $PANEL_CONF
 rm fusionpanel_preconfig*
@@ -607,6 +610,24 @@ if [[ "$OS" = "CentOs" ]]; then
     USR_LIB_PATH="/usr/libexec"
 elif [[ "$OS" = "Ubuntu" ]]; then
     $PACKAGE_INSTALLER postfix postfix-mysql
+    USR_LIB_PATH="/usr/lib"
+fi
+#--- OpenDKIM
+echo -e "\n-- Installing OpenDKIM"
+if [[ "$OS" = "CentOs" ]]; then
+    $PACKAGE_INSTALLER opendkim
+    USR_LIB_PATH="/usr/libexec"
+elif [[ "$OS" = "Ubuntu" ]]; then
+    $PACKAGE_INSTALLER opendkim
+    USR_LIB_PATH="/usr/lib"
+fi
+#--- DenyHosts
+echo -e "\n-- Installing DenyHosts"
+if [[ "$OS" = "CentOs" ]]; then
+    $PACKAGE_INSTALLER denyhosts
+    USR_LIB_PATH="/usr/libexec"
+elif [[ "$OS" = "Ubuntu" ]]; then
+    $PACKAGE_INSTALLER denyhosts
     USR_LIB_PATH="/usr/lib"
 fi
 
@@ -1103,6 +1124,18 @@ service "$CRON_SERVICE" restart
 service "$BIND_SERVICE" restart
 service proftpd restart
 service atd restart
+service opendkim restart
+service denyhosts restart
+
+chkconfig httpd on
+chkconfig mysqld on
+chkconfig named on
+chkconfig proftpd on
+chkconfig postfix on
+chkconfig dovecot on
+chkconfig opendkim on
+chkconfig denyhosts on
+
 
 #--- Store the passwords for user reference
 {
